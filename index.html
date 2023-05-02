@@ -1,95 +1,81 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Interactive Map</title>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.easybutton/2.4.0/easy-button.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.easybutton/2.4.0/easy-button.js"></script>
-  <style>
-    html, body, #map {
-      height: 100%;
-      width: 100%;
-      margin: 0;
-      padding: 0;
-    }
-  </style>
+    <title>OpenStreetMap Example</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <style>
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+    </style>
 </head>
 <body>
+    <div id="map"></div>
 
-  <div id="map"></div>
+    <script>
+        var map = L.map('map').setView([55.6761, 12.5683], 13);
 
-  <script>
-    var map = L.map('map').setView([55.6761, 12.5683], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
+                '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+                'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+            maxZoom: 18,
+            tileSize: 512,
+            zoomOffset: -1
+        }).addTo(map);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
-      maxZoom: 18,
-    }).addTo(map);
+        var drawnItems = new L.FeatureGroup().addTo(map);
 
-    var drawnItems = new L.FeatureGroup();
-    map.addLayer(drawnItems);
+        var drawControl = new L.Control.Draw({
+            edit: {
+                featureGroup: drawnItems
+            },
+            draw: {
+                polygon: false,
+                rectangle: false,
+                circle: false,
+                circlemarker: false,
+                marker: {
+                    icon: new L.Icon.Default()
+                },
+                polyline: {
+                    shapeOptions: {
+                        color: '#f357a1',
+                        weight: 5
+                    }
+                }
+            }
+        });
+        map.addControl(drawControl);
 
-    var drawControl = new L.Control.Draw({
-      edit: {
-        featureGroup: drawnItems,
-      },
-      draw: {
-        polyline: true,
-        polygon: false,
-        circle: false,
-        marker: true,
-      },
-    });
-    map.addControl(drawControl);
+        map.on('dblclick', function (e) {
+            var marker = new L.marker(e.latlng, {
+                draggable: true
+            }).addTo(drawnItems);
 
-    var editButton = L.easyButton('fa-pencil', function() {
-      if (map.editEnabled()) {
-        map.editTools.stopDrawing();
-        map.dragging.enable();
-      } else {
-        map.dragging.disable();
-        map.editTools.startMarker();
-      }
-    }, 'Toggle drawing tools');
-    editButton.addTo(map);
+            marker.on('click', function (e) {
+                drawnItems.removeLayer(marker);
+            });
+        });
 
-    var eraseButton = L.easyButton('fa-eraser', function() {
-      drawnItems.clearLayers();
-    }, 'Clear map');
-    eraseButton.addTo(map);
+        map.on('draw:created', function (e) {
+            var type = e.layerType,
+                layer = e.layer;
 
-    var points = [];
-    var lines = [];
+            if (type === 'marker') {
+                layer.on('click', function (e) {
+                    drawnItems.removeLayer(layer);
+                });
+            }
 
-    map.on('dblclick', function (e) {
-      // Save the drawn points and lines to the list
-      points.push(e.latlng);
-      if (lines.length > 0) {
-        lines.push([lines[lines.length - 1][1], e.latlng]);
-      }
-
-      // Create a new marker and add it to the map
-      var marker = L.marker(e.latlng).addTo(map);
-      marker.bindPopup('You clicked on the map at ' + e.latlng).openPopup();
-
-      // Create a new polyline layer and add it to the map
-      var polyline = L.polyline(lines).addTo(map);
-      polyline.setStyle({
-        color: 'red',
-        weight: 3,
-        opacity: 0.7,
-      });
-
-      // Clear the points array
-      points = [];
-    });
-
-  </script>
-
+            drawnItems.addLayer(layer);
+        });
+    </script>
 </body>
 </html>
